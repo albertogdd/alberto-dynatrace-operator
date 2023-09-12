@@ -61,18 +61,13 @@ jobs:
     strategy:
       matrix:
         platform: [amd64, arm64, ppc64le]
-        registry: [gcr, dockerhub]
+        registry: [gcr]
         include:
         - registry: gcr
           url: gcr.io
           repository: GCR_REPOSITORY
           username: GCR_USERNAME
           password: GCR_JSON_KEY
-        - registry: dockerhub
-          url: docker.io
-          repository: DOCKERHUB_REPOSITORY
-          username: DOCKERHUB_USERNAME
-          password: DOCKERHUB_PASSWORD
     steps:
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
@@ -148,18 +143,13 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        registry: [gcr, dockerhub]
+        registry: [gcr]
         include:
           - registry: gcr
             url: gcr.io
             repository: GCR_REPOSITORY
             username: GCR_USERNAME
             password: GCR_JSON_KEY
-          - registry: dockerhub
-            url: docker.io
-            repository: DOCKERHUB_REPOSITORY
-            username: DOCKERHUB_USERNAME
-            password: DOCKERHUB_PASSWORD
     steps:
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
@@ -198,18 +188,13 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        registry: [gcr, dockerhub]
+        registry: [gcr]
         include:
           - registry: gcr
             url: gcr.io
             repository: GCR_REPOSITORY
             username: GCR_USERNAME
             password: GCR_JSON_KEY
-          - registry: dockerhub
-            url: docker.io
-            repository: DOCKERHUB_REPOSITORY
-            username: DOCKERHUB_USERNAME
-            password: DOCKERHUB_PASSWORD
     steps:
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
@@ -336,7 +321,7 @@ jobs:
           url: 'https://api.snyk.io/v1/org/${{ secrets.SNYK_ORGANIZATION_ID }}/integrations/${{ secrets.SNYK_INTEGRATION_ID }}/import'
           method: 'POST'
           customHeaders: '{ "Content-Type": "application/json;charset=utf-8", "Authorization": "token ${{ secrets.SNYK_API_TOKEN }}" }'
-          data: '{ "target": { "name": "${{ secrets.DOCKERHUB_REPOSITORY }}:${{ needs.prepare.outputs.version }}" }}'
+          data: '{ "target": { "name": "${{ secrets.GCR_REPOSITORY }}:${{ needs.prepare.outputs.version }}" }}'
       - name: Show Response
         run: |
           echo ${{ steps.pushToSnyk.outputs.response }}
