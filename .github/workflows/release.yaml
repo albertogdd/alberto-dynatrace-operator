@@ -60,11 +60,11 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        platform: [amd64, arm64, ppc64le]
+        platform: [amd64]
         registry: [gcr]
         include:
         - registry: gcr
-          url: gcr.io
+          url: europe-west6-docker.pkg.dev/cloud-platform-207208
           repository: GCR_REPOSITORY
           username: GCR_USERNAME
           password: GCR_JSON_KEY
@@ -146,7 +146,7 @@ jobs:
         registry: [gcr]
         include:
           - registry: gcr
-            url: gcr.io
+            url: europe-west6-docker.pkg.dev/cloud-platform-207208
             repository: GCR_REPOSITORY
             username: GCR_USERNAME
             password: GCR_JSON_KEY
@@ -191,7 +191,7 @@ jobs:
         registry: [gcr]
         include:
           - registry: gcr
-            url: gcr.io
+            url: europe-west6-docker.pkg.dev/cloud-platform-207208
             repository: GCR_REPOSITORY
             username: GCR_USERNAME
             password: GCR_JSON_KEY
