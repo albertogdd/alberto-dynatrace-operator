@@ -40,7 +40,7 @@ jobs:
     needs: [prepare]
     strategy:
       matrix:
-        platform: [amd64, arm64, ppc64le]
+        platform: [amd64]
     steps:
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
@@ -60,14 +60,9 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        platform: [amd64, arm64, ppc64le]
-        registry: [gcr, dockerhub]
+        platform: [amd64]
+        registry: [dockerhub]
         include:
-        - registry: gcr
-          url: gcr.io
-          repository: GCR_REPOSITORY
-          username: GCR_USERNAME
-          password: GCR_JSON_KEY
         - registry: dockerhub
           url: docker.io
           repository: DOCKERHUB_REPOSITORY
@@ -148,14 +143,9 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        registry: [gcr, dockerhub]
+        registry: [dockerhub]
         include:
-          - registry: gcr
-            url: gcr.io
-            repository: GCR_REPOSITORY
-            username: GCR_USERNAME
-            password: GCR_JSON_KEY
-          - registry: dockerhub
+          - registry: docker
             url: docker.io
             repository: DOCKERHUB_REPOSITORY
             username: DOCKERHUB_USERNAME
@@ -198,13 +188,8 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        registry: [gcr, dockerhub]
+        registry: [dockerhub]
         include:
-          - registry: gcr
-            url: gcr.io
-            repository: GCR_REPOSITORY
-            username: GCR_USERNAME
-            password: GCR_JSON_KEY
           - registry: dockerhub
             url: docker.io
             repository: DOCKERHUB_REPOSITORY
