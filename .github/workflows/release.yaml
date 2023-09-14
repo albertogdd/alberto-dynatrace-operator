@@ -54,7 +54,7 @@ jobs:
   push:
     name: Push images
     environment: Release
-    needs: [prepare, build]
+    needs: [build]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -142,7 +142,7 @@ jobs:
   manifest:
     name: Create Dockerfile manifest
     environment: Release
-    needs: [prepare, push]
+    needs: [push]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -192,7 +192,7 @@ jobs:
   attach-sbom:
     name: Attach sbom
     environment: Release
-    needs: [ prepare, push, manifest ]
+    needs: [manifest]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -345,7 +345,7 @@ jobs:
   snyk:
     name: Push tag to snyk
     environment: Release
-    needs: [prepare, push]
+    needs: [push]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
