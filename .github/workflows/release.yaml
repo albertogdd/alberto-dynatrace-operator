@@ -326,3 +326,67 @@ jobs:
   #       run: |
   #         echo ${{ steps.pushToSnyk.outputs.response }}
   #         echo ${{ steps.pushToSnyk.outputs.headers }}
+
+  release:
+    if: ${{ !contains(github.ref, '-rc.') }}
+    name: Create release
+    needs: [prepare]
+    environment: Release
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+      - name: Setup Golang
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        with:
+          go-version-file: "${{ github.workspace }}/go.mod"
+      - name: Download dependencies
+        id: depdownload
+        run: |
+          hack/build/ci/install-cgo-dependencies.sh
+      - name: Generate release notes
+        shell: bash
+        env:
+          PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
+        run: |
+          hack/build/ci/generate-release-notes.sh
+      - name: Generate manifests
+        shell: bash
+        env:
+          VERSION_WITHOUT_PREFIX: ${{ needs.prepare.outputs.version_without_prefix }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+        run: |
+          make manifests/crd/release CHART_VERSION="${VERSION_WITHOUT_PREFIX}"
+
+          make manifests/kubernetes IMAGE="${DOCKERHUB_REPOSITORY}" TAG="${GITHUB_REF_NAME}"
+          make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${GITHUB_REF_NAME}"
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: ./CHANGELOG.md
+          files: |
+            config/deploy/kubernetes/kubernetes.yaml
+            config/deploy/openshift/openshift.yaml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          draft: true
+          fail_on_unmatched_files: true
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: ./CHANGELOG.md
+          files: |
+            config/deploy/kubernetes/kubernetes.yaml
+            config/deploy/kubernetes/kubernetes-csi.yaml
+            config/deploy/kubernetes/gke-autopilot.yaml
+            config/deploy/openshift/openshift.yaml
+            config/deploy/openshift/openshift-csi.yaml
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz
+            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz.prov
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: false
+          draft: true
+          fail_on_unmatched_files: true
