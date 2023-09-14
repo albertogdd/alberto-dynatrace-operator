@@ -226,13 +226,13 @@ jobs:
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
-  pre-release:
-    if: ${{ contains(github.ref, '-rc.') }}
-    name: Create pre-release
+  release:
+    name: Create release
     needs: [prepare]
     environment: Release
     permissions:
       contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -261,20 +261,20 @@ jobs:
 
           make manifests/kubernetes IMAGE="docker.io/dynatrace/dynatrace-operator" TAG="${VERSION}"
           make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${VERSION}"
-      - name: Rename manifests if pre-release
+      - name: Rename manifests if it's a pre-release
         if: ${{ contains(github.ref, '-rc.') }}
         run: |
           mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
           mv config/deploy/openshift/openshift-all.yaml config/deploy/openshift/openshift.yaml
-      - name: Build helm packages
-        if: ${{ contains(github.ref, '-rc.') }}
-        uses: ./.github/actions/build-helm
-        with:
-          version_without_prefix: ${{ needs.prepare.outputs.version_without_prefix }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          secring: ${{ secrets.HELM_SECRING }}
-          passphrase: ${{ secrets.HELM_PASSPHRASE }}
-          output-dir: "./helm-pkg"
+      # - name: Build helm packages
+      #   if: ${{ contains(github.ref, '-rc.') }}
+      #   uses: ./.github/actions/build-helm
+      #   with:
+      #     version_without_prefix: ${{ needs.prepare.outputs.version_without_prefix }}
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     secring: ${{ secrets.HELM_SECRING }}
+      #     passphrase: ${{ secrets.HELM_PASSPHRASE }}
+      #     output-dir: "./helm-pkg"
       - name: Create pre-release
         uses: softprops/action-gh-release@v1
         if: ${{ contains(github.ref, '-rc.') }}
@@ -304,6 +304,31 @@ jobs:
           prerelease: false
           draft: true
           fail_on_unmatched_files: true
+      - name: Update index helm file
+        uses: actions/checkout@v3
+        run: |
+          echo "Updating Helm repo index"
+          ./hack/build/ci/generate-new-helm-index-yaml.sh
+      - name: Create pull request for adding helm index to main branch
+        uses: peter-evans/create-pull-request@v5
+        with:
+          base: main
+          delete-branch: true
+          add-paths: |
+            ./config/helm/repos/stable/index.yaml
+            ./config/helm/repos/stable/index.yaml.previous
+          title: '[Automatic] Update index for ${{ github.ref }} release'
+          commit-message: Update index.yaml
+          committer: GitHub <noreply@github.com>
+          author: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+          body: |
+            # Description
+            Upgrade `index.yaml` to include latest version of the helm chart.
+            ## How can this be tested?
+            Helm upgrade to and install of `${{ github.ref }}` works.
+            ## Checklist
+            - [x] PR is labeled accordingly
+
 
   # snyk:
   #   name: Push tag to snyk
@@ -327,66 +352,66 @@ jobs:
   #         echo ${{ steps.pushToSnyk.outputs.response }}
   #         echo ${{ steps.pushToSnyk.outputs.headers }}
 
-  release:
-    if: ${{ !contains(github.ref, '-rc.') }}
-    name: Create release
-    needs: [prepare]
-    environment: Release
-    permissions:
-      contents: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
-      - name: Setup Golang
-        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
-        with:
-          go-version-file: "${{ github.workspace }}/go.mod"
-      - name: Download dependencies
-        id: depdownload
-        run: |
-          hack/build/ci/install-cgo-dependencies.sh
-      - name: Generate release notes
-        shell: bash
-        env:
-          PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
-        run: |
-          hack/build/ci/generate-release-notes.sh
-      - name: Generate manifests
-        shell: bash
-        env:
-          VERSION_WITHOUT_PREFIX: ${{ needs.prepare.outputs.version_without_prefix }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-          DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
-        run: |
-          make manifests/crd/release CHART_VERSION="${VERSION_WITHOUT_PREFIX}"
+  # release:
+  #   if: ${{ !contains(github.ref, '-rc.') }}
+  #   name: Create release
+  #   needs: [prepare]
+  #   environment: Release
+  #   permissions:
+  #     contents: write
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4.0.0
+  #     - name: Setup Golang
+  #       uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+  #       with:
+  #         go-version-file: "${{ github.workspace }}/go.mod"
+  #     - name: Download dependencies
+  #       id: depdownload
+  #       run: |
+  #         hack/build/ci/install-cgo-dependencies.sh
+  #     - name: Generate release notes
+  #       shell: bash
+  #       env:
+  #         PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
+  #       run: |
+  #         hack/build/ci/generate-release-notes.sh
+  #     - name: Generate manifests
+  #       shell: bash
+  #       env:
+  #         VERSION_WITHOUT_PREFIX: ${{ needs.prepare.outputs.version_without_prefix }}
+  #         VERSION: ${{ needs.prepare.outputs.version }}
+  #         DOCKERHUB_REPOSITORY: ${{ secrets.DOCKERHUB_REPOSITORY }}
+  #       run: |
+  #         make manifests/crd/release CHART_VERSION="${VERSION_WITHOUT_PREFIX}"
 
-          make manifests/kubernetes IMAGE="${DOCKERHUB_REPOSITORY}" TAG="${GITHUB_REF_NAME}"
-          make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${GITHUB_REF_NAME}"
-      - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          body_path: ./CHANGELOG.md
-          files: |
-            config/deploy/kubernetes/kubernetes.yaml
-            config/deploy/openshift/openshift.yaml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: true
-          draft: true
-          fail_on_unmatched_files: true
-      - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          body_path: ./CHANGELOG.md
-          files: |
-            config/deploy/kubernetes/kubernetes.yaml
-            config/deploy/kubernetes/kubernetes-csi.yaml
-            config/deploy/kubernetes/gke-autopilot.yaml
-            config/deploy/openshift/openshift.yaml
-            config/deploy/openshift/openshift-csi.yaml
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz
-            helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz.prov
-          token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: false
-          draft: true
-          fail_on_unmatched_files: true
+  #         make manifests/kubernetes IMAGE="${DOCKERHUB_REPOSITORY}" TAG="${GITHUB_REF_NAME}"
+  #         make manifests/openshift IMAGE="registry.connect.redhat.com/dynatrace/dynatrace-operator" TAG="${GITHUB_REF_NAME}"
+  #     - name: Create release
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         body_path: ./CHANGELOG.md
+  #         files: |
+  #           config/deploy/kubernetes/kubernetes.yaml
+  #           config/deploy/openshift/openshift.yaml
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         prerelease: true
+  #         draft: true
+  #         fail_on_unmatched_files: true
+  #     - name: Create release
+  #       uses: softprops/action-gh-release@v1
+  #       with:
+  #         body_path: ./CHANGELOG.md
+  #         files: |
+  #           config/deploy/kubernetes/kubernetes.yaml
+  #           config/deploy/kubernetes/kubernetes-csi.yaml
+  #           config/deploy/kubernetes/gke-autopilot.yaml
+  #           config/deploy/openshift/openshift.yaml
+  #           config/deploy/openshift/openshift-csi.yaml
+  #           helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz
+  #           helm-pkg/dynatrace-operator-${{ needs.prepare.outputs.version_without_prefix }}.tgz.prov
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         prerelease: false
+  #         draft: true
+  #         fail_on_unmatched_files: true
