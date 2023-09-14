@@ -61,13 +61,8 @@ jobs:
     strategy:
       matrix:
         platform: [amd64, arm64, ppc64le]
-        registry: [gcr, dockerhub]
+        registry: [dockerhub]
         include:
-        - registry: gcr
-          url: gcr.io
-          repository: GCR_REPOSITORY
-          username: GCR_USERNAME
-          password: GCR_JSON_KEY
         - registry: dockerhub
           url: docker.io
           repository: DOCKERHUB_REPOSITORY
@@ -140,7 +135,7 @@ jobs:
           pyxis-api-token: ${{ secrets.PYXIS_API_TOKEN }}
 
   manifest:
-    name: Create Dockerfile manifest
+    name: Create Docker manifests
     environment: Release
     needs: [push]
     runs-on: ubuntu-latest
@@ -148,13 +143,8 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        registry: [gcr, dockerhub]
+        registry: [dockerhub]
         include:
-          - registry: gcr
-            url: gcr.io
-            repository: GCR_REPOSITORY
-            username: GCR_USERNAME
-            password: GCR_JSON_KEY
           - registry: dockerhub
             url: docker.io
             repository: DOCKERHUB_REPOSITORY
@@ -198,13 +188,8 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        registry: [gcr, dockerhub]
+        registry: [dockerhub]
         include:
-          - registry: gcr
-            url: gcr.io
-            repository: GCR_REPOSITORY
-            username: GCR_USERNAME
-            password: GCR_JSON_KEY
           - registry: dockerhub
             url: docker.io
             repository: DOCKERHUB_REPOSITORY
