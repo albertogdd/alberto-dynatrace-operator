@@ -60,7 +60,7 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        platform: [amd64, arm64, ppc64le]
+        platform: [amd64]
         registry: [dockerhub]
         include:
         - registry: dockerhub
@@ -307,7 +307,7 @@ jobs:
       - name: Update index helm file
         run: |
           echo "Updating Helm repo index"
-          ./hack/build/ci/generate-new-helm-index-yaml.sh
+          hack/build/ci/generate-new-helm-index-yaml.sh
       - name: Create pull request for adding helm index to main branch
         uses: peter-evans/create-pull-request@v5
         with:
