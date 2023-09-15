@@ -228,7 +228,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [prepare, build, attach-sbom, prepare-cosign-pub]
+    needs: [prepare, build, attach-sbom]
     environment: Release
     permissions:
       contents: write
