@@ -226,6 +226,24 @@ jobs:
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
+  attach-cosign-pub:
+    name: Attach cosign pub
+    environment: Release
+    needs: [prepare, push, manifest]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Write to file
+      env:
+        COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+      run: |
+        mkdir -p tmp
+        echo ${COSIGN_PUBLIC_KEY} > tmp/cosign.pub
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: cosign.pub
+        path: tmp/cosign.pub
+
   release:
     name: Create release
     needs: [prepare, build, attach-sbom]
