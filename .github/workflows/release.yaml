@@ -61,13 +61,8 @@ jobs:
     strategy:
       matrix:
         platform: [amd64, arm64, ppc64le]
-        registry: [gcr, dockerhub]
+        registry: [dockerhub]
         include:
-        - registry: gcr
-          url: gcr.io
-          repository: GCR_REPOSITORY
-          username: GCR_USERNAME
-          password: GCR_JSON_KEY
         - registry: dockerhub
           url: docker.io
           repository: DOCKERHUB_REPOSITORY
@@ -140,7 +135,7 @@ jobs:
           pyxis-api-token: ${{ secrets.PYXIS_API_TOKEN }}
 
   manifest:
-    name: Create manifest
+    name: Create Docker manifests
     environment: Release
     needs: [prepare, push]
     runs-on: ubuntu-latest
@@ -148,13 +143,8 @@ jobs:
       id-token: write
     strategy:
       matrix:
-        registry: [gcr, dockerhub]
+        registry: [dockerhub]
         include:
-          - registry: gcr
-            url: gcr.io
-            repository: GCR_REPOSITORY
-            username: GCR_USERNAME
-            password: GCR_JSON_KEY
           - registry: dockerhub
             url: docker.io
             repository: DOCKERHUB_REPOSITORY
@@ -192,19 +182,14 @@ jobs:
   attach-sbom:
     name: Attach sbom
     environment: Release
-    needs: [ prepare, push, manifest ]
+    needs: [prepare, push, manifest]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
     strategy:
       matrix:
-        registry: [gcr, dockerhub]
+        registry: [dockerhub]
         include:
-          - registry: gcr
-            url: gcr.io
-            repository: GCR_REPOSITORY
-            username: GCR_USERNAME
-            password: GCR_JSON_KEY
           - registry: dockerhub
             url: docker.io
             repository: DOCKERHUB_REPOSITORY
@@ -241,10 +226,9 @@ jobs:
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
-  pre-release:
-    if: ${{ contains(github.ref, '-rc.') }}
-    name: Create pre-release
-    needs: [prepare]
+  release:
+    name: Create release
+    needs: [prepare, attach-sbom]
     environment: Release
     permissions:
       contents: write
@@ -267,7 +251,7 @@ jobs:
           PRE_RELEASE: ${{ contains(github.ref, '-rc.') }}
         run: |
           hack/build/ci/generate-release-notes.sh
-      - name: Generate manifests
+      - name: Generate K8s manifests
         shell: bash
         env:
           VERSION_WITHOUT_PREFIX: ${{ needs.prepare.outputs.version_without_prefix }}
@@ -283,7 +267,7 @@ jobs:
           mv config/deploy/kubernetes/kubernetes-all.yaml config/deploy/kubernetes/kubernetes.yaml
           mv config/deploy/openshift/openshift-all.yaml config/deploy/openshift/openshift.yaml
       - name: Build helm packages
-        if: ${{ contains(github.ref, '-rc.') }}
+        if: ${{ !contains(github.ref, '-rc.') }}
         uses: ./.github/actions/build-helm
         with:
           version_without_prefix: ${{ needs.prepare.outputs.version_without_prefix }}
@@ -321,7 +305,6 @@ jobs:
           draft: true
           fail_on_unmatched_files: true
       - name: Update index helm file
-        uses: actions/checkout@v3
         run: |
           echo "Updating Helm repo index"
           ./hack/build/ci/generate-new-helm-index-yaml.sh
@@ -347,7 +330,7 @@ jobs:
   snyk:
     name: Push tag to snyk
     environment: Release
-    needs: [prepare, push]
+    needs: [push]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
