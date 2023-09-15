@@ -226,19 +226,6 @@ jobs:
           signing-key: ${{ secrets.COSIGN_PRIVATE_KEY }}
           signing-password: ${{ secrets.COSIGN_PASSWORD }}
 
-  prepare-cosign-pub:
-    name: Prepare cosign pub
-    environment: Release
-    needs: [prepare, push, manifest]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Write to file
-      env:
-        COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
-      run: |
-        mkdir -p tmp
-        echo ${COSIGN_PUBLIC_KEY} > tmp/cosign.pub
-
   release:
     name: Create release
     needs: [prepare, build, attach-sbom, prepare-cosign-pub]
@@ -324,6 +311,12 @@ jobs:
         run: |
           echo "Updating Helm repo index"
           hack/build/ci/generate-new-helm-index-yaml.sh "tmp-helm" "${VERSION_WITHOUT_PREFIX}"
+      - name: Prepare cosign.pub artifact
+        env:
+          COSIGN_PUBLIC_KEY: ${{ secrets.COSIGN_PUBLIC_KEY }}
+        run: |
+          mkdir -p tmp
+          echo ${COSIGN_PUBLIC_KEY} > tmp/cosign.pub
       - name: Create pull request for adding helm index to main branch
         uses: peter-evans/create-pull-request@v5
         with:
