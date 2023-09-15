@@ -228,7 +228,7 @@ jobs:
 
   release:
     name: Create release
-    needs: [prepare, attach-sbom]
+    needs: [prepare, build, attach-sbom]
     environment: Release
     permissions:
       contents: write
@@ -305,9 +305,11 @@ jobs:
           draft: true
           fail_on_unmatched_files: true
       - name: Update index helm file
+        env:
+          VERSION_WITHOUT_PREFIX: ${{ needs.prepare.outputs.version_without_prefix }}
         run: |
           echo "Updating Helm repo index"
-          hack/build/ci/generate-new-helm-index-yaml.sh
+          hack/build/ci/generate-new-helm-index-yaml.sh "tmp-helm" "${VERSION_WITHOUT_PREFIX}"
       - name: Create pull request for adding helm index to main branch
         uses: peter-evans/create-pull-request@v5
         with:
