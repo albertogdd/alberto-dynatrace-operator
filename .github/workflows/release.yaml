@@ -19,6 +19,7 @@ jobs:
         with:
           ref: main
           sparse-checkout: config/helm/repos/stable/index.yaml
+          sparse-checkout-cone-mode: false
       - name: Check filesystem after
         run: |
           set -x
