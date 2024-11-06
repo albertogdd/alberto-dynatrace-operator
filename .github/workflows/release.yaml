@@ -20,7 +20,16 @@ jobs:
           ref: main
           sparse-checkout: config/helm/repos/stable/index.yaml
           sparse-checkout-cone-mode: false
+          path: main
       - name: Check filesystem after
+        run: |
+          set -x
+          ls
+      - name: Copy file
+        run: |
+          set -x
+          cp "main/config/helm/repos/stable/index.yaml" "config/helm/repos/stable/index.yaml"
+      - name: Check filesystem end
         run: |
           set -x
           ls
